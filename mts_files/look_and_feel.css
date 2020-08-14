@@ -1,0 +1,504 @@
+/* global classes */
+A.nodecoration{
+    text-decoration:none;
+}
+
+/*help icon*/
+img.helpicon{
+    border:none;
+}
+
+/* amt classes */
+span.amt_faq{
+    position:relative;
+    left:30px;
+}
+a.amt_faq{
+    font-size:12pt;
+}
+img.amt_faq{
+    display:inline-block;
+    vertical-align:middle;
+}
+
+.PEERcheckboxnotsent{
+    border:1px solid red;
+}
+.PEERcheckboxalreadysent{
+    color:grey;
+}
+
+#amt_links_table td{
+    padding:1px;
+    padding-right:20px}
+
+
+/* multitarget link classes */
+.link_icon_same_page{
+    display:inline-block;
+    border:none;
+    padding-left:2px;
+    height:10px;
+    width:10px}
+.link_icon_same_page:hover{
+    border:solid;
+    border-width:thin;
+    border-style:solid;
+}
+
+.link_icon_new_page{
+    display:inline-block;
+    border:none;
+    padding-left:2px;
+    height:10px;
+    width:10px}
+.link_icon_new_page:hover{
+    border:solid;
+    border-width:thin;
+    border-style:solid;
+}
+
+/* debug classes */
+.expand_collapse_debug_link{
+    font-size:12pt;
+    position:relative;
+    top:-20px;
+}
+.expandable_debug_span{
+    display:none;
+    font-size:8pt;
+}
+.collapsable_debug_span{
+    display:block;
+    font-size:8pt;
+}
+
+
+/* Autocompleter */
+
+div.autocomplete {
+  position:absolute;
+  width:550px;
+  background-color:#fafafa;
+  border:1px solid #ccc;
+  border-width: 1px 1px 0;
+  margin:0;
+  padding:0;
+  font-family: arial;
+  font-size: 10pt;
+}
+
+div.autocomplete ul {
+  list-style-type:none;
+  margin:0;
+  padding:0;
+}
+
+div.autocomplete ul li.selected { 
+  background-color: #4173cc;
+  color:#fff;
+}
+
+div.autocomplete ul li {
+  list-style-type:none;
+  display:block;
+  margin:0px;
+  padding:2px;
+  cursor:pointer;
+  border-bottom:1px solid #ccc;
+}
+
+div.autocomplete ul li .autocomplete_regex {
+    font-weight: bold;
+    background-color: #a1d3ff;
+}
+
+div.autocomplete ul li.selected .autocomplete_regex {
+    background-color: #81B3FF;
+}
+
+
+/* TT 14463 -new merge person tools */
+.mergeperson_tbl{
+  border-collapse:separate;
+  border-width:1px;
+  border-color:#000000;
+  border-style:solid;
+}
+.mergeperson_tbl tr.head{
+  background-color:#b1babb
+}
+.mergeperson_tbl tr.odd{
+  background-color:#FFFFFF;
+}
+.mergeperson_tbl tr.even{
+  background-color:#DCE4EE;
+}
+
+.mergeperson_tbl th.head{
+  padding:4px 2px;
+  text-align:left;
+  vertical-align:bottom;
+  white-space:nowrap;
+}
+.mergeperson_tbl td{
+  padding:2px;
+  vertical-align:top;
+}
+.mergeperson_tbl td.nowrap{
+  padding:2px;
+  vertical-align:top;
+  white-space:nowrap;
+}
+
+.mergeperson_tbl TD.email DIV{
+  white-space: nowrap;
+  padding-bottom: 2px;
+}
+
+/* TT 15911 -go to journals display */
+.goto_journals_list_link{
+}
+
+.goto_journals_list_layer {
+  position: absolute;
+  z-Index: 1001;
+  overflow: visible;
+  white-space: nowrap;
+  padding: 0px;
+  border: 2px solid #000000;
+  background-color: #DCE4EE;
+}
+
+.goto_journal_div{
+}
+
+.goto_journal_link{
+  display: block;
+  padding-left: 12px;
+  padding-right: 12px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  text-decoration: none;
+  text-align: left;
+  color: #000000;
+}
+.goto_journal_link:hover{
+  background-color: #D0D0D0;
+}
+
+
+
+#custom_confirm_message {
+	background-color: #EFEFEF;
+	border: 1px solid black;
+	color: black;
+	font-size: 10px;
+	
+	padding: 20px;
+	padding-left: 60px;
+	padding-right: 60px;
+	position: fixed!important;
+	position: absolute;
+	width: 200px;
+	float: left;
+	z-index: 10000;
+	text-align: center;
+	left: auto;
+	top: auto;
+}
+
+#custom_confirm_message .buttons {
+  width: 100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#custom_confirm_message .button {
+	border: 1px solid black;
+	font-weight: bold;
+	font-size: 10px;
+	padding: 4px 7px;
+	background-color: #DFDFDF;
+	cursor: pointer;
+}
+
+#custom_confirm_message span {
+	display: block;
+	margin-bottom: 15px;	
+}
+
+
+/* 17729 add_edit_letters improvements */
+.alert {
+  padding: 8px 35px 8px 14px;
+  margin-bottom: 20px;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  background-color: #fcf8e3;
+  border: 1px solid #fbeed5;
+  width: 600px;
+   -webkit-border-radius: 4px;
+   -moz-border-radius: 4px;
+        border-radius: 4px;
+}
+
+.alert-success {
+  color: #468847;
+  background-color: #dff0d8;
+  border-color: #d6e9c6;
+}
+
+.alert-error {
+  color: #b94a48;
+  background-color: #f2dede;
+  border-color: #eed3d7;
+}
+
+.err:hover {
+  text-decoration:underline;
+}
+
+/* 16271 */
+.supp_mat_export_highwire {
+  border:1px outset;
+}
+
+.supp_mat_export_highwire * td {
+  text-align:center;
+  border:1px inset;
+}
+
+.supp_mat_export_highwire * th {
+  text-align:center;
+  border:1px inset;
+}
+
+
+/* TT 18332: multiple person email addresses */
+.personemail{
+  margin-bottom: 6px;
+  text-align: left;
+  padding: 0px 2px 2px 2px;
+}
+.personemail a{
+  font-style: italic;
+}
+.personemail .inst{
+  margin-bottom: 2px;
+  max-width: 700px;
+}
+
+.personemail .email-tbl{
+  border-collapse: collapse;
+  border-width: 1px;
+  border-color: #000000;
+  border-style: solid;
+}
+.personemail .email-tbl th{
+  border-bottom: 1px solid #000000;
+  padding: 4px 6px;
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+.personemail .email-tbl td{
+  border-bottom: 1px solid #000000;
+  padding: 4px 6px;
+  height: 36px;
+  vertical-align: top;
+  white-space: nowrap;
+}
+.personemail .email-tbl td.input{
+  text-align: center;
+}
+.personemail .email-tbl td.status0{
+}
+.personemail .email-tbl td.status1{
+}
+.personemail .email-tbl td.status2{
+}
+.personemail .email-tbl td.status3{
+}
+.personemail .email-tbl td.status4{
+}
+.personemail .email-tbl [class^="status"] a{
+  display: block;
+  margin-top: 6px;
+}
+
+.personemail .none{
+  margin: 6px;
+  margin-left: 12px;
+  color: #ff8888;
+  font-weight: bold;
+}
+
+.personemail .layer{
+  position: absolute;
+  z-index: 1001;
+  margin-left: 36px;
+  width: auto !important;
+  height: auto !important;
+  border: 1px solid #000000;
+  box-shadow: 0px 0px 12px 6px #808080;
+  border-radius: 6px;
+  padding: 12px;
+  background-color: #FFFFFF;
+}
+.personemail .layer *{
+  margin-bottom: 6px;
+}
+.personemail .layer .label{
+  font-weight: bold;
+}
+
+.personemail .trans-layer{
+  position: absolute;
+  z-index: 1000;
+  top: 0px;
+  left: 0px;
+  width: 100%;
+  height: 100%;
+  background-color: transparent;
+}
+
+.personemail-bio{
+  margin-bottom: 12px;
+}
+.personemail-bio .label{
+  font-weight: bold;
+}
+.personemail-bio .option{
+  font-style: italic;
+}
+
+.personemail-bio .email-tbl{
+  border-collapse: collapse;
+  border-width: 1px;
+  border-color: #000000;
+  border-style: solid;
+}
+.personemail-bio .email-tbl td{
+  padding: 4px 12px 4px 6px;
+  vertical-align: top;
+  white-space: nowrap;
+}
+.personemail-bio .email-tbl td:last-child{
+  padding: 4px 6px 4px 6px;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.cmn_report_format_title{
+  text-align:center;
+  font-weight:bold;
+  margin-bottom:18px;
+}
+
+.cmn_report_display_table_caption{
+  text-align:left;
+  font-weight:bold;
+  white-space:nowrap;
+}
+
+.files_table {
+  border:1px solid gray;
+  border-collapse:collapse;
+  margin-bottom:24px;
+}
+.files_table td, .files_table th {
+  border:1px solid gray;
+  padding: 4px 6px;
+}
+
+.tooltip div, .tooltip_right div {
+  display: none;
+  z-index: 10;
+  padding: 10px;
+  position: absolute;
+  margin-top: 30px;
+  max-width: 500px;
+  -moz-border-radius: 6px;
+  -webkit-border-radius: 6px;
+  border-radius: 6px;
+  -moz-box-shadow: 6px 6px 10px #CCC;
+  -webkit-box-shadow: 6px 6px 10px #CCC;
+  box-shadow: 6px 6px 10px #CCC;
+}
+.tooltip:hover div, .tooltip_right:hover div {
+    border: 1px solid #BDBDBD;
+    color: #000000;
+    background: #FFFFFF;
+}
+
+.tooltip_arrow, .popover_arrow, .tooltip_right_arrow {
+    z-index: 20;
+    position: absolute;
+    top: -12px;
+    left: 50px;
+    border: 0;
+    background-color: transparent;
+}
+
+.tooltip_right div {
+  margin-top: -30px;
+  margin-left: 13px;
+}
+
+.tooltip_right:hover div {
+  display: inline;
+  position: absolute;
+}
+
+.tooltip_right_arrow {
+  top: 30px;
+  left: -12px;
+}
+
+div.popover {
+  display: none;
+  position: absolute;
+  z-index: 1010;
+  max-width: 25%;
+  padding: 0px;
+  text-align: left;
+  white-space: normal;
+  background-color: #ffffff;
+  border: 1px solid #cccccc;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  -moz-border-radius: 6px;
+  -webkit-border-radius: 6px;
+  border-radius: 6px;
+  -moz-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+  -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+  background-clip: padding-box;
+}
+
+.popover_title {
+  padding: 8px 14px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: normal;
+  line-height: 18px;
+  background-color: #f7f7f7;
+  border-bottom: 1px solid #ebebeb;
+  border-radius: 5px 5px 0 0;
+}
+
+.popover_inner {
+  padding: 10px;
+}
+
+.icon_circle {
+  display: inline-block;
+  vertical-align: top;
+  border-radius: 50%;
+  padding: 2px;
+  margin: 0px 2px;
+  text-align: center;
+  font-size: 8px;
+  font-weight: bold;
+  color: white;
+  background-color: red;
+}

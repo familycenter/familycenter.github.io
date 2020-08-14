@@ -1,0 +1,1386 @@
+/* $Id: ejp.js,v 41.0.2.2 2014/11/08 11:03:30 jlerman Exp $ */
+
+// DOM loaded event
+// Put stuff in here that should fire off when the DOM is ready
+document.observe("dom:loaded", function() {
+
+ 
+});
+
+// Place holder object
+var Ejp = { };
+
+///////////////////////////////////////////////////////////////////////////////
+// EJP Autocompleter
+
+if(typeof Ajax.Autocompleter == 'undefined')
+  throw("Ejp.Autocompleter requires including script.aculo.us' controls.js library");
+
+/*
+ * Ejp Options:
+ *  createHiddenInputId - Boolean.  If set will create a hidden input field to store id values
+ *  hiddenInputId - Text.  The name/id of the hidden field to create (must be set if createHiddenInputId is set)
+ *  createAutoCompleteDiv - Bool.  Set this to automatically insert the div needed for the autocompleter
+ *  regexMatch - Bool.  Set this to do an in-word regex match. (Note: must also pass 'regex=1' on the query string
+ *  stripAliases - Bool.  Strip aliases that appear in parens.
+ */
+
+
+Ejp.Autocompleter = Class.create(Ajax.Autocompleter, 
+{
+              
+  initialize: function($super, element, update, url, options) {
+    if (options.createAutoCompleteDiv) {
+      this.insertSpanAndDiv(element);
+    }
+
+    if (options.createHiddenInputId) {
+      if (options.hiddenInputId == null || options.hiddenInputId == '') {
+        throw("hiddenInputId not set");
+      }
+
+      this.insertHiddenInputId(element, options.hiddenInputId);
+    }
+
+    $super(element, update, url, options);
+
+    this._choices = new Array();
+    this._lastText = this.getToken();
+    this._choicesValid = false;
+    this._hadText = this._lastText.length;
+
+    // Auto populate an ID value with the ajax data
+    if (this.options.hiddenInputId != null && this.options.hiddenInputId != '') {
+      this.options.afterUpdateElement = this.afterUpdate.bind(this);
+    }
+
+    if (this.options.stripAliases) {
+      this.options.updateElement = this.beforeUpdate.bind(this);
+    }
+    
+  },
+
+  beforeUpdate: function(selectedElement) {
+    var value = '';
+    if (this.options.select) {
+      var nodes = $(selectedElement).select('.' + this.options.select) || [];
+      if(nodes.length>0) value = Element.collectTextNodes(nodes[0], this.options.select);
+    } else
+      value = Element.collectTextNodesIgnoreClass(selectedElement, 'informal');
+    
+    value = value.replace(/\(.*\)/, '').strip(); // Remove anything between parens 
+    value = value.replace(/\[.*\]/, '').strip(); // Remove anything between brackets
+    value = value.replace(/<span.*span>/, '').strip(); // Remove anything between brackets
+
+    var bounds = this.getTokenBounds();
+    if (bounds[0] != -1) {
+      var newValue = this.element.value.substr(0, bounds[0]);
+      var whitespace = this.element.value.substr(bounds[0]).match(/^\s+/);
+      if (whitespace)
+        newValue += whitespace[0];
+      this.element.value = newValue + value + this.element.value.substr(bounds[1]);
+    } else {
+      this.element.value = value;
+    }
+    this.oldElementValue = this.element.value;
+    this.element.focus();
+
+    if (this.options.afterUpdateElement) {
+      this.options.afterUpdateElement(this.element, selectedElement);
+    }
+  },
+
+  afterUpdate: function(text, li) {
+    var el = $(this.options.hiddenInputId);
+      
+    if (el) {
+	el.value = li.id;
+
+	// TTS 19681
+	// fundref checks to set validation icon
+	var re = /funder_id/i;
+	if (re.test(el.id)) {
+	    var funder_id=el.id;
+	    var funder_cnt=funder_id.replace("funder_id_","");
+	    var ms_id = $('ms_id').value;
+	    var ms_id_key = $('fundref_ms_id_key').value;
+	    tvsFunderSetValid(funder_cnt, ms_id, ms_id_key);
+	}
+    }
+  },
+
+  insertHiddenInputId: function(id, name) {
+    // Don't insert if it's already there
+    if (!$(name)) {
+      Element.insert(id, { after: '<input type="hidden" name="' + name +'" id="' + name + '" value="" />'});
+    }
+  },
+                     
+  insertSpanAndDiv: function(id) {
+    var html = ' <span id="ind_' + id + '" style="display: none"><img src="images/indicator_tiny_red.gif" alt="Working..." /></span>';
+    html += '<div id="autocomplete_' + id +'" class="autocomplete"></div>';
+    
+    Element.insert(id, {after: html});
+  },
+
+                                     
+  getUpdatedChoices: function($super) {
+    // Only get updates when most of the text changes
+    var text = this.getToken();
+    
+    // If the start of the text changed, gotta get a whole new batch
+    if (!text.startsWith(this._lastText.substr(0, this.options.minChars))) {
+      this._choicesValid = false;
+    }
+
+    // If there was text there before and it got shorter, need a new batch
+    if (this._hadText && text.length < this._lastText.length) {
+      this._choicesValid = false;
+    }
+
+    // Don't care if there was already text if the length is smaller than the first query
+    if (text.length <= this.options.minChars) {
+      this._hadText = false;
+    }
+
+    this._lastText = text;
+
+    if (this._choicesValid) {
+      this.updateChoices(this.filterChoices());
+      return;
+    }
+
+    $super();
+  },
+
+  hide: function($super) {
+    this._choicesValid = false;
+    this._lastText = '';
+    
+    $super();
+  },
+
+  
+  filterChoices: function() {
+    var choices = new Array();
+    var text = this.getToken();
+    var len = text.length;
+    var re = new RegExp(text, 'i');
+
+    for (var x = 0; x < this._choices.length; x++) {
+        var value=this._choices[x];
+	
+	value = value.replace(/<span.*span>/, '').strip(); // Remove anything between brackets
+	if (this.options.regexMatch) {
+          if (re.test(value)) {
+              choices.push(this._choices[x]);
+          }
+      } else {
+          var el = value.substr(0, len);
+
+          if (text.toLowerCase() == el.toLowerCase()) {
+              choices.push(this._choices[x]);
+          }
+      }
+    }
+
+    return choices;
+  },
+
+    // 'choices' will be an array instead of an unordered list
+  updateChoices: function($super, choices) {
+    var text = this.getToken();
+    
+    var html = '<ul>';
+    for (var x = 0; x < choices.length; x++) {
+      if (choices[x] == '') continue;
+      var parts = choices[x].split(';;');
+
+
+      if (this.options.regexMatch) {
+          var country = parts[0].match(/<span.*span>/);
+
+          parts[0] = parts[0].replace(/<span.*span>/, '43211234');
+          var regex = new RegExp('(' + text + ')', 'ig');
+          parts[0] = parts[0].replace(regex, '<span class="autocomplete_regex">$1</span>');
+	  if (country) {
+              parts[0] = parts[0].replace(/43211234/,country);
+	  }
+      }
+
+      html += '<li id="' + parts[1] +'">' + parts[0] + '</li>';
+    }
+    html += '</ul>';
+
+    // Text changed, blank out the old id
+    if (this.options.hiddenInputId != null && this.options.hiddenInputId != '') {
+      $(this.options.hiddenInputId).value = '';
+    }
+
+    // ?????
+    this.update.scrollTop = 0;
+
+    $super(html);
+  },
+
+  onComplete: function(request) {
+    this._choicesValid = true;
+    this._choices = request.responseText.split('||'); // save off the choices
+    this.updateChoices(this._choices);
+  },
+
+    // scriptaculous bug fix
+  markPrevious: function() {
+    if(this.index > 0) {this.index--;}
+    else {
+      this.index = this.entryCount-1;
+      this.update.scrollTop = this.update.scrollHeight;
+    }
+    selection = this.getEntry(this.index);
+    selection_top = selection.offsetTop;
+    if(selection_top < this.update.scrollTop){
+      this.update.scrollTop = this.update.scrollTop-selection.offsetHeight;
+    }
+  },
+    
+    // scriptaculous bug fix
+  markNext: function() {
+    if(this.index < this.entryCount-1) {this.index++;}
+    else {
+      this.index = 0;
+      this.update.scrollTop = 0;
+    }
+    selection = this.getEntry(this.index);
+    selection_bottom = selection.offsetTop+selection.offsetHeight;
+    if(selection_bottom > this.update.scrollTop+this.update.offsetHeight){
+      this.update.scrollTop = this.update.scrollTop+selection.offsetHeight;
+    }
+  }
+
+    /*
+  markPrevious: function() {
+    if(this.index > 0) this.index--;
+      else this.index = this.entryCount-1;
+    this.getEntry(this.index).scrollIntoView(false);
+    }*/
+      
+});
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Organizations
+
+var orgEditor = null; // Inline editor for the org
+function modifyOrg(org_id) {
+  // Clean up the old one first
+  if (orgEditor != null) {
+    orgEditor.handleFormCancellation();
+    orgEditor.dispose();
+  }
+
+  orgEditor = new Ajax.InPlaceEditor('org_' + org_id, bref + '/' + prog_base, 
+                                     {
+                                       cancelControl: false, // This is FALSE becaues IE has major problems with the cancel button
+                                       callback: function(form, value) { return 'form_type=cfg_org_modify_ajax&org_id=' + org_id + '&value=' + escape(value); },
+                                         onComplete: function() { this.dispose(); this.element.title = ''; }
+                                     });
+  orgEditor.enterEditMode();
+}
+
+function deleteOrg(org_id) {
+  var el = $('org_id_' + org_id);
+  if (el) {
+    new Ajax.Request(bref + '/' + prog_base,
+                     {
+                       parameters: $H({ form_type: 'cfg_org_delete_ajax', 'org_id': org_id }),
+                         onSuccess: function(t) { el.fade(); }
+                     });
+
+  }
+}
+
+function checkBulkOrgImport() {
+  if ($('bulk_org_file').value == '') {
+    alert('File name is required');
+    return false;
+  }
+
+  if ($('filetype_replace').checked) {
+    return confirm('You have chosen to replace every entry in the database.  Are you sure the file you have selected to upload is complete and correct?');
+  }
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// WordLists
+
+var wlEditor = null; // Inline editor for the wl
+function wl_modifyWord(wl_id) {
+  // Clean up the old one first
+  if (wlEditor != null) {
+    wlEditor.handleFormCancellation();
+    wlEditor.dispose();
+  }
+
+  wlEditor = new Ajax.InPlaceEditor('wl_' + wl_id, bref + '/' + prog_base, 
+                                     {
+                                       cancelControl: false, // This is FALSE becaues IE has major problems with the cancel button
+                                       callback: function(form, value) { return 'form_type=cfg_wl_modify_ajax&wl_id=' + wl_id + '&value=' + escape(value); },
+                                         onComplete: function() { this.dispose(); this.element.title = ''; }
+                                     });
+  wlEditor.enterEditMode();
+}
+
+function wl_deleteWord(wl_id) {
+  var el = $('wl_id_' + wl_id);
+  if (el && confirm('Are you sure you want to delete this word and all of it\'s aliases?')) {
+    new Ajax.Request(bref + '/' + prog_base,
+                     {
+                       parameters: $H({ form_type: 'cfg_wl_delete_ajax', 'wl_id': wl_id }),
+                         onSuccess: function(t) { el.fade(); }
+                     });
+
+  }
+}
+
+// Show the edit table
+function wl_editAliases(wl_id, link) {
+
+  $('wl_alias_edit_box').innerHTML = '<image src="/images/indicator_tiny_red.gif"> <strong>Loading Aliases...</strong>';
+  element = $(link);
+  Element.clonePosition('wl_alias_edit_box', link, { setHeight:false, setWidth:false, offsetTop:element.offsetHeight+4, offsetLeft:-285 });
+  $('wl_alias_edit_box').style.display='block';
+  
+  new Ajax.Request(bref + '/' + prog_base,
+                   {
+                   parameters: $H({ form_type: 'cfg_wl_edit_aliases_ajax', 'wl_id': wl_id}),
+                       onSuccess: function(t) { $('wl_alias_edit_box').innerHTML = t.responseText; }
+                   });
+
+  return;
+  /////////////////////////////////////////////////////////////////////
+  // DELETE ME!!!!!
+  $('wl_alias_' + wl_id).show();
+  $('wl_alias_td_' + wl_id).innerHTML = '<image src="/images/indicator_tiny_red.gif"> <strong>Loading Aliases...</strong>';
+  
+  new Ajax.Request(bref + '/' + prog_base,
+                   {
+                   parameters: $H({ form_type: 'cfg_wl_edit_aliases_ajax', 'wl_id': wl_id}),
+                       onSuccess: function(t) { $('wl_alias_td_' + wl_id).innerHTML = t.responseText; }
+                   });
+}
+
+
+function wl_closeEditAliases() {
+  new Effect.BlindUp('wl_alias_edit_box');
+}
+
+
+function wl_addAlias(wl_id) {
+  var text = $('wl_new_alias_' + wl_id).value;
+
+  new Ajax.Request(bref + '/' + prog_base,
+                   {
+                   parameters: $H({ form_type: 'cfg_wl_add_alias_ajax', 'wl_id': wl_id, 'wordalias': text }),
+                       onSuccess: function(t) {  
+                       $('wl_new_alias_' + wl_id).value = ''; // clear the field
+                       $('wl_alias_table_' + wl_id).insert({bottom: t.responseText}); // add the alias to the table
+                       }
+                     });
+}
+
+
+function wla_modifyWord(wla_id) {
+  // Clean up the old one first
+  if (wlEditor != null) {
+    wlEditor.handleFormCancellation();
+    wlEditor.dispose();
+  }
+
+  wlEditor = new Ajax.InPlaceEditor('wla_' + wla_id, bref + '/' + prog_base, 
+                                     {
+                                       cancelControl: false, // This is FALSE becaues IE has major problems with the cancel button
+                                       callback: function(form, value) { return 'form_type=cfg_wl_modify_alias_ajax&wla_id=' + wla_id + '&value=' + escape(value); },
+                                         onComplete: function() { this.dispose(); this.element.title = ''; }
+                                     });
+  wlEditor.enterEditMode();
+}
+
+function wla_deleteWord(wla_id) {
+  var el = $('wla_id_' + wla_id);
+  if (el && confirm('Are you sure you want to delete this alias?')) {
+    new Ajax.Request(bref + '/' + prog_base,
+                     {
+                       parameters: $H({ form_type: 'cfg_wl_delete_alias_ajax', 'wla_id': wla_id }),
+                         onSuccess: function(t) { el.fade(); }
+                     });
+
+  }
+}
+
+function wl_checkBulkWordListImport() {
+  if ($('bulk_wl_file').value == '') {
+    alert('File name is required');
+    return false;
+  }
+
+  if ($('filetype_replace').checked) {
+    return confirm('You have chosen to replace every entry in the database.  Are you sure the file you have selected to upload is complete and correct?');
+  }
+
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Auto resize text areas
+var ResizingTextArea = Class.create({
+  defaultRows: 1,
+      
+  initialize: function(field) {
+    this.defaultRows = Math.max(field.rows, 1);
+    this.resizeNeeded = this.resizeNeeded.bindAsEventListener(this);
+    Event.observe(field, "click", this.resizeNeeded);
+    Event.observe(field, "keyup", this.resizeNeeded);
+  },
+  
+  resizeNeeded: function(event) {
+    var t = Event.element(event);
+    var lines = t.value.split('\n');
+    var newRows = lines.length + 1;
+    var oldRows = t.rows;
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      if (line.length >= t.cols) newRows += Math.floor(line.length / t.cols);
+    }
+    if (newRows > t.rows) t.rows = newRows;
+    if (newRows < t.rows) t.rows = Math.max(this.defaultRows, newRows);
+  }
+
+});
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Helper stuff
+
+/* TT 15332 */
+function getInputsRegExp(form, typeName, re_name, re_opt) {
+  //requires prototype
+  var inputs = form.getInputs(typeName);
+
+  if (!re_name) return inputs;
+
+  for (var i = 0, matchingInputs = [], length = inputs.length; i < length; i++) {
+    var input = inputs[i];
+    var matched=false;
+    if (re_opt) {
+      var evalStr = "matched=input.name.match(/"+re_name+"/"+re_opt+");";
+    } else {
+      var evalStr = "matched=input.name.match(/"+re_name+"/);";
+    }
+    eval(evalStr);
+    if (matched) {
+      matchingInputs.push(input);
+    }
+  }
+
+  return matchingInputs;
+}
+
+/* TT 15332 */
+function validateEmail(emailStr) {
+  var atIndex = emailStr.indexOf("@");
+  var dotIndex = emailStr.indexOf(".");
+  var strLen = emailStr.length;
+
+  //check for "@" sign
+  if (atIndex == -1 || atIndex == 0 || atIndex == strLen) {
+    return false;
+  }
+
+  //check for "."
+  if (dotIndex == -1 || dotIndex == 0 || dotIndex == strLen) {
+    return false;
+  }
+
+  //check to make sure only one "@" sign
+  if (emailStr.indexOf("@", (atIndex+1)) != -1) {
+    return false;
+  }
+
+  //check to make sure there are no "." immediately before or after the "@" sign
+  if (emailStr.substring(atIndex-1, atIndex) == "." || emailStr.substring(atIndex+1, atIndex+2) == ".") {
+    return false;
+  }
+
+  //check to make sure there is a "." after the "@" sign
+  if (emailStr.indexOf(".", (atIndex+2)) == -1) {
+    return false;
+  }
+
+  //check to make sure no spaces
+  if (emailStr.indexOf(" ") != -1) {
+    return false;
+  }
+
+  //all good
+  return true;
+}
+
+// A really nice browser detection dealy
+var BrowserDetect = {
+	init: function () {
+		this.browser = this.searchString(this.dataBrowser) || "An unknown browser";
+		this.version = this.searchVersion(navigator.userAgent)
+			|| this.searchVersion(navigator.appVersion)
+			|| "an unknown version";
+		this.OS = this.searchString(this.dataOS) || "an unknown OS";
+	},
+	searchString: function (data) {
+		for (var i=0;i<data.length;i++)	{
+			var dataString = data[i].string;
+			var dataProp = data[i].prop;
+			this.versionSearchString = data[i].versionSearch || data[i].identity;
+			if (dataString) {
+				if (dataString.indexOf(data[i].subString) != -1)
+					return data[i].identity;
+			}
+			else if (dataProp)
+				return data[i].identity;
+		}
+	},
+	searchVersion: function (dataString) {
+		var index = dataString.indexOf(this.versionSearchString);
+		if (index == -1) return;
+		return parseFloat(dataString.substring(index+this.versionSearchString.length+1));
+	},
+	dataBrowser: [
+		{ 	string: navigator.userAgent,
+			subString: "OmniWeb",
+			versionSearch: "OmniWeb/",
+			identity: "OmniWeb"
+		},
+		{
+			string: navigator.vendor,
+			subString: "Apple",
+			identity: "Safari"
+		},
+		{
+			prop: window.opera,
+			identity: "Opera"
+		},
+		{
+			string: navigator.vendor,
+			subString: "iCab",
+			identity: "iCab"
+		},
+		{
+			string: navigator.vendor,
+			subString: "KDE",
+			identity: "Konqueror"
+		},
+		{
+			string: navigator.userAgent,
+			subString: "Firefox",
+			identity: "Firefox"
+		},
+		{
+			string: navigator.vendor,
+			subString: "Camino",
+			identity: "Camino"
+		},
+		{		// for newer Netscapes (6+)
+			string: navigator.userAgent,
+			subString: "Netscape",
+			identity: "Netscape"
+		},
+		{
+			string: navigator.userAgent,
+			subString: "MSIE",
+			identity: "Explorer",
+			versionSearch: "MSIE"
+		},
+		{
+			string: navigator.userAgent,
+			subString: "Gecko",
+			identity: "Mozilla",
+			versionSearch: "rv"
+		},
+		{ 		// for older Netscapes (4-)
+			string: navigator.userAgent,
+			subString: "Mozilla",
+			identity: "Netscape",
+			versionSearch: "Mozilla"
+		}
+	],
+	dataOS : [
+		{
+			string: navigator.platform,
+			subString: "Win",
+			identity: "Windows"
+		},
+		{
+			string: navigator.platform,
+			subString: "Mac",
+			identity: "Mac"
+		},
+		{
+			string: navigator.platform,
+			subString: "Linux",
+			identity: "Linux"
+		}
+	]
+
+};
+BrowserDetect.init();
+
+
+/**
+*
+* URL encode / decode
+* http://www.webtoolkit.info/
+*
+**/
+
+var Url = {
+
+  // public method for url encoding
+  encode : function (string) {
+    return escape(this._utf8_encode(string));
+  },
+
+  // public method for url decoding
+  decode : function (string) {
+    return this._utf8_decode(unescape(string));
+  },
+
+  // private method for UTF-8 encoding
+  _utf8_encode : function (string) {
+    string = string.replace(/\r\n/g,"\n");
+    var utftext = "";
+
+    for (var n = 0; n < string.length; n++) {
+
+      var c = string.charCodeAt(n);
+
+      if (c < 128) {
+        utftext += String.fromCharCode(c);
+      }
+      else if((c > 127) && (c < 2048)) {
+        utftext += String.fromCharCode((c >> 6) | 192);
+        utftext += String.fromCharCode((c & 63) | 128);
+      }
+      else {
+        utftext += String.fromCharCode((c >> 12) | 224);
+        utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+        utftext += String.fromCharCode((c & 63) | 128);
+      }
+
+    }
+
+    return utftext;
+  },
+
+  // private method for UTF-8 decoding
+  _utf8_decode : function (utftext) {
+    var string = "";
+    var i = 0;
+    var c = c1 = c2 = 0;
+
+    while ( i < utftext.length ) {
+
+      c = utftext.charCodeAt(i);
+
+      if (c < 128) {
+        string += String.fromCharCode(c);
+        i++;
+      }
+      else if((c > 191) && (c < 224)) {
+        c2 = utftext.charCodeAt(i+1);
+        string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+        i += 2;
+      }
+      else {
+        c2 = utftext.charCodeAt(i+1);
+        c3 = utftext.charCodeAt(i+2);
+        string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+        i += 3;
+      }
+
+    }
+
+    return string;
+  }
+
+}
+
+var Cookies = {
+  set: function(cookieName, cookieValue, nDays) {
+	var today = new Date();
+	var expire = new Date();
+	if (nDays==null || nDays==0) nDays=1;
+	expire.setTime(today.getTime() + 3600000*24*nDays);
+	document.cookie = cookieName+"="+cookieValue + ";expires="+expire.toGMTString();
+  },
+
+  get: function(name) { 
+	var index = document.cookie.indexOf(name + "=");
+	if (index == -1) return null;
+	index = document.cookie.indexOf("=", index) + 1;
+	var endstr = document.cookie.indexOf(";", index);
+	if (endstr == -1) endstr = document.cookie.length;
+	return unescape(document.cookie.substring(index, endstr));
+  }
+
+}
+
+/* TT 15911 -go to journals display */
+var overLayer = 0;
+var overLink = 0;
+function gotoJournalsShow( alignMode ) {
+  var top, left;
+
+  //get the link position
+  var posArray = $('goto_journals_list_link').positionedOffset();
+
+  //show the popup layer
+  $('goto_journals_list_layer').style.display = '';
+
+
+  //set top and left values for the layer
+  if ( alignMode == 'left' ) {
+    //align to the left edge of the link
+    left = posArray[0];
+    top = posArray[1] + $('goto_journals_list_link').getHeight();
+
+  }else if ( alignMode == 'right' ) {
+    //align to the right edge of the link
+    left = posArray[0] + $('goto_journals_list_link').getWidth() - $('goto_journals_list_layer').getWidth();
+    top = posArray[1] + $('goto_journals_list_link').getHeight();
+
+  }else {
+    //align center under the link
+    left = posArray[0] + ($('goto_journals_list_link').getWidth() /2 ) - ($('goto_journals_list_layer').getWidth() / 2);
+    top = posArray[1] + $('goto_journals_list_link').getHeight();
+  }
+
+  $('goto_journals_list_layer').style.left = left+'px';
+  $('goto_journals_list_layer').style.top = top+'px';
+
+  return;  
+}
+
+function gotoJournalsHide(){
+  if ( overLink == 0 && overLayer == 0 ) {
+    setTimeout("gotoJournalsHideLayer()", 1000);
+  }
+  return;
+}
+
+function gotoJournalsHideLayer() {
+  if ( overLink == 0 && overLayer == 0 ) {
+    $('goto_journals_list_layer').style.display = 'none';
+ }
+  return;
+}
+
+
+/* TT 15909 -autosave review form */
+
+function autoSaveReviewForm( userInitiated ) {
+
+  $('autosave_msg').innerHTML = 'Saving...';
+
+  try {
+    // TT 19928 - fixing autosave when Xinha is used on review form
+    $$('textarea').each(function (e) {
+                          if (Xinha != null) {
+                            editor = Xinha.getEditor(e);
+                            if (editor != null) {
+                              e.value = editor.getEditorContent(e);
+                            }
+                          }
+                        });
+  } catch (err) {
+  }
+
+  var paramList = $('review_form_loader').serialize();
+  paramList = paramList.replace('form_type=review&', 'form_type=autosave_review_form_ajax&');
+
+  //tt 16868: add timestamp to AJAX request
+  var date = new Date();
+  var time = date.getTime();
+
+  //send ajax request
+  new Ajax.Request(bref + '/' + prog_base,
+                   { method:'post', postBody:'timestamp='+time+'&'+paramList,
+                       onSuccess:autoSaveReviewFormAjaxOnSuccess,
+                       onFailure:function(t){ alert('Error ' + t.status + ' -- ' + t.statusText); return;} } );
+
+  return;
+}
+
+function autoSaveReviewFormAjaxOnSuccess(t) {
+
+  //set response text
+  $('autosave_msg').innerHTML = t.responseText;
+
+}
+
+function regAutoCompleteAddTerms( termCnt, incrementCnt ) {
+
+  $('aoe_add_term'+termCnt).style.display='none';
+
+  var endCnt = parseInt(termCnt) + parseInt(incrementCnt);
+
+  for ( var cnt=termCnt; cnt<=endCnt; cnt++ ) {
+    $('aoe_container'+cnt).style.display = '';
+  } 
+
+  return;
+}
+
+// returns the browser type
+function getBrowserType() {
+  var userAgentString = navigator.userAgent.toLowerCase();
+  var browserType;
+
+  if ( !userAgentString.include( 'compatible' ) ) {
+    browserType = "Netscape Navigator";
+  }else if ( userAgentString.include( 'msie' ) ) {
+    browserType	= "Internet Explorer";
+  }else if ( userAgentString.include( 'konqueror' ) ) {
+    browserType = "Konqueror";
+  }else if ( userAgentString.include( 'safari' ) ) {
+    browserType	= "Safari";
+  }else if ( userAgentString.include( 'opera' ) ) {
+    browserType	= "Opera";
+  }else if ( userAgentString.include( 'omniweb' ) ) {
+    browserType	= "OmniWeb";
+  }else if ( userAgentString.include( 'webtv' ) ) {
+    browserType	= "WebTV";
+  }else if ( userAgentString.include( 'icab' ) ) {
+    browserType	= "iCab";
+  }else {
+    browserType = "An unknown browser";
+  }
+
+  return ( browserType );
+}
+
+var CustomConfirm = {
+	container: "",
+	overlay: "",
+  valueSelected: null,
+  callback: null,
+	
+	
+	open: function(text, myCallback) {
+    // set callback
+    if (myCallback) {
+      CustomConfirm.callback = myCallback
+    }
+
+		//set message
+		CustomConfirm.container = document.getElementById("custom_confirm_message");
+		CustomConfirm.container.getElementsByTagName("SPAN")[0].innerHTML = text;
+		CustomConfirm.container.getElementsByTagName("INPUT")[0].focus();
+		CustomConfirm.container.getElementsByTagName("INPUT")[0].focus();
+		
+		//create site overlay
+		CustomConfirm.overlay = document.createElement("DIV");
+		CustomConfirm.overlay.style.width = CustomConfirm.getPageSize()[0] + "px";
+		CustomConfirm.overlay.style.height = CustomConfirm.getPageSize()[1] + "px";
+		CustomConfirm.overlay.style.backgroundColor = '#000000';
+		CustomConfirm.overlay.style.top = '0';
+		CustomConfirm.overlay.style.left = '0';
+		CustomConfirm.overlay.style.position = 'absolute';
+		CustomConfirm.overlay.style.zIndex = '9999';
+		
+		document.body.appendChild(CustomConfirm.overlay);
+
+		
+		//center messagebox
+		var arrayPageScroll = document.viewport.getScrollOffsets();
+		var winH = document.viewport.getHeight();
+		//var winH = arrayPageScroll[1] + (document.viewport.getHeight());
+		var lightboxLeft = arrayPageScroll[0];
+		
+		CustomConfirm.container.style.top = ((winH / 2) - 90) + "px";
+		CustomConfirm.container.style.left = ((CustomConfirm.getPageSize()[0] / 2) - 155) + "px";
+		
+		new Effect.Appear(CustomConfirm.container, {duration: 0.2});
+		new Effect.Opacity(CustomConfirm.overlay, {duration: 0.2, to: 0.8});
+	},
+	
+	close: function(myVal) {
+    // record value clicked
+    CustomConfirm.valueSelected = myVal;
+
+		new Effect.Fade(CustomConfirm.container, {duration: 0.3});
+		new Effect.Fade(CustomConfirm.overlay, {duration: 0.3, afterFinish: function() {
+			document.body.removeChild(CustomConfirm.overlay);
+
+      if (CustomConfirm.callback) {
+        CustomConfirm.callback();
+      }
+		}});
+	},
+	
+	getPageSize: function() {
+	        
+		var xScroll, yScroll;
+		
+		if (window.innerHeight && window.scrollMaxY) {	
+			xScroll = window.innerWidth + window.scrollMaxX;
+			yScroll = window.innerHeight + window.scrollMaxY;
+		} else if (document.body.scrollHeight > document.body.offsetHeight){ // all but Explorer Mac
+			xScroll = document.body.scrollWidth;
+			yScroll = document.body.scrollHeight;
+		} else { // Explorer Mac...would also work in Explorer 6 Strict, Mozilla and Safari
+			xScroll = document.body.offsetWidth;
+			yScroll = document.body.offsetHeight;
+		}
+	
+		var windowWidth, windowHeight;
+	
+		if (self.innerHeight) {	// all except Explorer
+			if(document.documentElement.clientWidth){
+				windowWidth = document.documentElement.clientWidth; 
+			} else {
+				windowWidth = self.innerWidth;
+			}
+			windowHeight = self.innerHeight;
+		} else if (document.documentElement && document.documentElement.clientHeight) { // Explorer 6 Strict Mode
+			windowWidth = document.documentElement.clientWidth;
+			windowHeight = document.documentElement.clientHeight;
+		} else if (document.body) { // other Explorers
+			windowWidth = document.body.clientWidth;
+			windowHeight = document.body.clientHeight;
+		}	
+	
+		// for small pages with total height less then height of the viewport
+		if(yScroll < windowHeight){
+			pageHeight = windowHeight;
+		} else { 
+			pageHeight = yScroll;
+		}
+	
+		// for small pages with total width less then width of the viewport
+		if(xScroll < windowWidth){	
+			pageWidth = xScroll;		
+		} else {
+			pageWidth = windowWidth;
+		}
+	
+		return [pageWidth,pageHeight];
+	}
+};
+
+function getWordCount(input) {
+  var words;
+
+  //get rid of duplicate spaces
+  input = input.replace(/\s+/mg, ' ');
+
+  //get rid of dash wrapping 
+  input = input.replace(/[\S]\-\s+|\s+\-[\S]/mg, 'X');
+
+  //get rid of leading & trailing spaces
+  input = input.replace(/^\s*|\s*\$/gi, '');
+
+  //get rid of special symbols... count each one
+  // as a character (maybe a word depending on surrounding spaces)
+  input = input.replace(/\{[a-z0-9 ]+\}/img, 'X');
+
+  //get rid of html commands
+  input = input.replace(/\<[\/a-z0-9]+\>/img, '');
+
+  //fix unicode characters
+  input = input.replace(/\&\#x[A-F0-9]*\;/img, 'X');
+
+  words = input.split(' ');
+
+  return( words.length );
+}
+
+function getCharCount(input) {
+
+  //get rid of duplicate spaces
+  input = input.replace(/\s+/mg, ' ');
+
+  //get rid of leading & trailing spaces
+  input = input.replace(/^\s*|\s*\$/gi, '');
+
+  //get rid of special symbols... count each one as a character
+  input = input.replace(/\{[a-z0-9 ]+\}/img, 'X');
+
+  //get rid of html commands
+  input = input.replace(/\<[\/a-z0-9]+\>/img, '');
+
+  //fix unicode characters
+  input = input.replace(/\&\#x[A-F0-9]*\;/img, 'X');
+
+  //fix &lt;
+  input = input.replace(/\&lt\;/img, 'X');
+
+  //fix &gt;
+  input = input.replace(/\&gt\;/img, 'X');
+
+  return( input.length );
+}
+
+function checkStandardDate( dateTag, dateLabel, blankOK ) {
+
+  var year, month, day;
+
+  year = $(dateTag+'_year').value;
+  month = $(dateTag+'_month').value;
+  day = $(dateTag+'_day').value;
+
+  if ( !checkDate(year, month, day, blankOK ) ) {
+    alert('Please provide a valid '+dateLabel+'.');
+    return 0;
+  }
+
+  return 1;
+}
+
+function checkDate( year, month, day, blankOK ) {
+  if ( blankOK ) {
+    if ( year == '' && month == '' && day == '' ) {
+      return 1;
+    }
+  }
+
+  if (!checkInteger(year.toString(),0) || !checkInteger(month.toString(),0) || !checkInteger(day.toString(),0) ) {
+      return 0;
+  }
+
+  if ( month == 2 && day > 28 ) {
+    if ( day > 29 ) {
+      return 0;
+    } else if ( ((year % 4 != 0) || (year % 100 == 0)) && (year % 400 != 0) ) {
+      return 0;
+    }
+  } else if ( day > 30 && 
+             (month == 4 || month == 6 || month == 9 || month == 11) ) {
+    return 0;
+  }
+
+  return 1;
+}
+
+function checkInteger( value, allowBlank ) {
+
+  var number = value.strip();
+
+  //blanks ok?
+  if ( number == '' ) {
+    if ( allowBlank ) {
+      return ( 1 );
+    } else {
+      return ( 0 );
+    }
+  }
+
+  if (number.toString().search(/^\-?[0-9]+$/) != 0) {
+    return ( 0 );
+  }
+
+  return ( 1 );
+}
+
+function buildDate( dateTag ) {
+
+  var date, year, month, day;
+
+  year = $(dateTag+'_year').value;
+  month = $(dateTag+'_month').value;
+  day = $(dateTag+'_day').value;
+
+  date = '';
+  if ( year != '' && month != '' && day != '' ) {
+    date = year+'-'+month+'-'+day;
+  }
+
+  return ( date );
+}
+
+function parseDate( date ) {
+  var dateParts, year, month, day;
+
+  if ( date != '' ) {
+    //remove time portion
+    date = date.replace(/ .*$/, "");
+
+    //parse date into individual elements
+    dateParts = date.split('-');
+    year = dateParts[0];
+    month = dateParts[1];
+    day = dateParts[2];
+
+    //remove leading 0's
+    month = month.replace(/^0/, "");
+    day = day.replace(/^0/, "");
+  } else {
+    year = '';
+    month = '';
+    day = '';
+  }
+
+  return { year:year, month:month, day:day };
+}
+
+function updateSelectedDate( date, dateTag ) {
+  var dateParts, year, month, day, dateField, i;
+
+  //parse date
+  dateParts = parseDate(date);
+  year = dateParts.year;
+  month = dateParts.month;
+  day = dateParts.day;
+
+  //update selected year
+  dateField = document.getElementById(dateTag + '_year');
+  for ( i=0; i<dateField.options.length; i++ ) {
+    if ( dateField.options[i].value == year ) {
+      dateField.selectedIndex = i;
+      break;
+    }
+  }
+
+  //update selected month
+  dateField = document.getElementById(dateTag + '_month');
+  for ( i=0; i<dateField.options.length; i++ ) {
+    if ( dateField.options[i].value == month ) {
+      dateField.selectedIndex = i;
+      break;
+    }
+  }
+
+  //update selected day
+  dateField = document.getElementById(dateTag + '_day');
+  for ( i=0; i<dateField.options.length; i++ ) {
+    if ( dateField.options[i].value == day ) {
+      dateField.selectedIndex = i;
+      break;
+    }
+  }
+}
+
+//unselects items from the list that are not valid selections, i.e. journal and volume headings
+function issueExistingSelect( issueId, hasNoneOption ) {
+
+  if ( $(issueId).selectedIndex != -1 ) {
+    if ( $(issueId).options[$(issueId).selectedIndex].value == '' && ( $(issueId).selectedIndex != 0 || hasNoneOption == 0 ) ) {
+      if ( getBrowserType() == 'Internet Explorer' ) {
+        $(issueId).selectedIndex = -1;
+      } else {
+        $(issueId).options[$(issueId).selectedIndex].selected = 0;
+      }
+    }
+  }
+
+  return;
+}
+
+//toggles the display of a div and updates the text of the action link
+function toggleDivDisplay( divID, showLabel, hideLabel ) {
+
+  if ( $(divID).style.display == 'none' ) {
+    $(divID).style.display = '';
+    $(divID + '_action').innerHTML = hideLabel;
+  } else {
+    $(divID).style.display = 'none';
+    $(divID + '_action').innerHTML = showLabel;
+  }
+}
+
+//TT 16415
+function getUrlQuerySafeString(val) {
+  //always first so it doesn't escape the rest of the % encoded symbols.
+  val = val.replace(/\%/gi, "%25");
+
+  val = val.replace(/ /gi, "%20");
+  val = val.replace(/\!/gi, "%21");
+  val = val.replace(/\"/gi, "%22");
+  val = val.replace(/\#/gi, "%23");
+  val = val.replace(/\$/gi, "%24");
+  val = val.replace(/\&/gi, "%26");
+  val = val.replace(/\'/gi, "%27");
+  val = val.replace(/\(/gi, "%28");
+  val = val.replace(/\)/gi, "%29");
+  val = val.replace(/\*/gi, "%2A");
+  val = val.replace(/\+/gi, "%2B");
+  val = val.replace(/\,/gi, "%2C");
+  val = val.replace(/\-/gi, "%2D");
+  val = val.replace(/\./gi, "%2E");
+  val = val.replace(/\//gi, "%2F");
+  val = val.replace(/\:/gi, "%3A");
+  val = val.replace(/\;/gi, "%3B");
+  val = val.replace(/\</gi, "%3C");
+  val = val.replace(/\=/gi, "%3D");
+  val = val.replace(/\>/gi, "%3E");
+  val = val.replace(/\?/gi, "%3F");
+  val = val.replace(/\@/gi, "%40");
+  val = val.replace(/\[/gi, "%5B");
+  val = val.replace(/\\/gi, "%5C");
+  val = val.replace(/\]/gi, "%5D");
+  val = val.replace(/\^/gi, "%5E");
+  val = val.replace(/\_/gi, "%5F");
+  val = val.replace(/\'/gi, "%60");
+  val = val.replace(/\{/gi, "%7B");
+  val = val.replace(/\|/gi, "%7C");
+  val = val.replace(/\}/gi, "%7D");
+  val = val.replace(/\~/gi, "%7E");
+
+  return val;
+}
+
+
+function get_url_param( query ) {
+	query = query.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+	var expr = "[\\?&]"+query+"=([^&#]*)";
+	var regex = new RegExp( expr );
+	var results = regex.exec( window.location.href );
+	if( results !== null ) {
+		return results[1];
+		return decodeURIComponent(results[1].replace(/\+/g, " "));
+	} else {
+		return false;
+	}
+}
+
+
+function get_vms_link(){
+  var el = get_url_param("el");
+  var ms_id, ms_rev_no, ms_id_key;
+
+  //tt19637
+  var vms_ms_id_key_inputs = document.getElementsByName("view_ms_ms_id_key");
+  if ( vms_ms_id_key_inputs.length > 0 ) {
+    ms_id_key = vms_ms_id_key_inputs[0].value;
+  } else {
+    ms_id_key = false;
+  }
+
+  ms_id = false;
+  if (el == false) {//fetch params from URL
+    ms_id = get_url_param("ms_id");
+    ms_rev_no = get_url_param("ms_rev_no");
+    if (ms_id_key == false) ms_id_key = get_url_param("ms_id_key");
+    j_id = get_url_param("j_id");
+  }
+
+  if (ms_id == false) {//fetch params from inputs
+    ms_id = document.getElementsByName("ms_id")[0].value;
+    ms_rev_no = document.getElementsByName("ms_rev_no")[0].value;
+    j_id = document.getElementsByName("j_id")[0].value;
+    if (ms_id_key == false) {
+      el = el.replace(/.*?9/,"");
+      el = el.replace(/Z$/,"");
+      ms_id_key = el;
+    }
+  }
+
+  document.location.href = "/cgi-bin/main.plex?form_type=view_ms&j_id=" + j_id + "&ms_id=" + ms_id + "&ms_rev_no=" + ms_rev_no + "&ms_id_key=" + ms_id_key;
+}
+
+function get_orcid(tag, p_id) {
+
+	form_reload = $('form_type').value;
+	var ms_id = $('ms_id').value;
+	var ms_rev_no = $('ms_rev_no').value;
+        var ms_id_key = $('ms_id_key').value; //tt19637
+	var j_id = $('j_id').value;
+	var current_top_tab = $('current_top_tab').value;
+	var current_nested_tab = $('current_nested_tab').value;
+	var url;
+
+	url = bref+"/cgi-bin/main.plex?form_type=get_orcid";
+	
+	if(typeof j_id != 'undefined' && j_id != null){
+		url += "&j_id=" + j_id;
+	}
+	if(typeof ms_id != 'undefined' && ms_id != null){
+		url += "&ms_id=" + ms_id;
+	}
+	if(typeof ms_rev_no != 'undefined' && ms_rev_no != null){
+		url += "&ms_rev_no=" + ms_rev_no;
+	}
+	if(typeof ms_id_key != 'undefined' && ms_id_key != null){ //tt19637
+		url += "&ms_id_key=" + ms_id_key;
+	}
+	if(typeof current_top_tab != 'undefined' && current_top_tab != null){
+		url += "&current_top_tab=" + current_top_tab;
+	}
+	if(typeof current_nested_tab != 'undefined' && current_nested_tab != null){
+		url += "&current_nested_tab=" + current_nested_tab;
+	}
+	url += "&source=" + form_reload + "&html_tag=" + tag + "&p_id=" + p_id;
+
+	window.location = url; 
+	return false;
+
+}
+
+var ejpFormElementsGetFunctionalValue = {
+  ejpGetFunctionalValue: function(e){
+    if (e == null || e.type == null) {return null;}
+    e = $(e);
+    if (e.type == 'checkbox'
+             || e.type == 'radio') {
+      var selected_boxes = document.getElementsByName(e.name);
+      return $A(selected_boxes).filter(function(e){return e.checked;}).map(function(e){return e.value});
+    } else {
+      return e.value;
+    }
+  },
+
+  ejpHasFunctionalValue: function(e, v) {
+    return -1 < $A([].concat(ejpGetFunctionalValue(e))).indexOf(v);
+  }
+
+}
+
+// add the function globally to form elements
+Element.addMethods(ejpFormElementsGetFunctionalValue);
+
+//utility function to prevent submitting form when user presses Enter in a text input
+// -- to use it, bind to onKeyPress event
+function noEnter(evt) {
+  var keyCde;
+
+  if (window.event) { //Firefox
+    keyCde = window.event.keyCode;
+  } else { //IE
+    keyCde = evt.which;
+  }
+
+  if (keyCde == 13) { //13 = code for Enter key
+    return(false);
+  } else {
+    return(true);
+  }
+}
+
+//TT 19582
+function isRequired($form_name, $type, $element_name, $msg) {
+    
+    var $populated = false;
+    
+    if( $type == 'radio' ) {
+        var checkedRadio = Form.getInputs($form_name, $type, $element_name).find(function(radio) { return radio.checked; });
+
+        if( checkedRadio == undefined ) {
+            if( $msg !== '' && $msg != undefined ) {
+                alert($msg);
+            }
+        } else {
+            $populated = true;
+        }
+    }
+    
+    return $populated;
+}

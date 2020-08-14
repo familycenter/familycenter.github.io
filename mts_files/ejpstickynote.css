@@ -1,0 +1,84 @@
+/* $Id: ejpstickynote.css,v 18.0 2007/04/03 17:53:52 plotkin Exp $ */
+
+div.stickynote {
+     border: 1px solid black;
+     background-color: #FFFF66;
+     position: absolute;
+}
+
+div.stickynote div.header {
+     border-bottom: 1px solid black;
+     font-weight: bold;
+     cursor: move;
+     padding: 2px;
+}
+
+div.stickynote div.text {
+     margin: 2px;
+     overflow: auto;
+}
+
+div.stickynote div.text textarea {
+     border: 1px solid black;
+}
+
+div.stickynote div.header input {
+     border: 1px solid black;
+}
+
+div.stickynote div.resizeblock {
+     position: absolute;
+     width: 14px;
+     height: 14px;
+     bottom: 0px;
+     right: 0px;
+     cursor: se-resize;
+     margin: 0px;
+     padding: 0px;
+}
+
+div.stickynote div.close {
+     position: absolute;
+     width: 9px;
+     height: 9px;
+     right: 2px;
+     top: 2px;
+     cursor: pointer;
+     margin: 0px;
+     padding: 0px;
+
+}
+
+div.stickynote div.linkbox {
+     font-size: .8em;
+     position: absolute;
+     bottom: 0px;
+}
+
+div.stickynote div.working {
+     display:none;
+     position: absolute;
+     left: 0px;
+     top: 0px;
+}
+
+
+
+div.stickynote div.colorpicker {
+     width: auto;
+     height: auto;
+
+}
+
+div.stickynote div.colorpicker td {
+     width: 10px;
+     height: 10px;
+     cursor: pointer;
+     font-size:0pt;
+     border: 1px solid black;
+}
+
+div.stickynote div.securitypicker {
+     width: auto;
+     height: auto;
+}

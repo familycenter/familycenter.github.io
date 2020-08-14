@@ -1,0 +1,137 @@
+/* $Id: ejpupload.css,v 17.0 2006/11/29 19:59:21 plotkin Exp $ */
+
+/* Upload meter stuff */
+
+#uploadmetercontainer {
+  width:100%;
+}
+
+#uploadbar {
+  border: 1px solid black;
+  background-color: lightgray;
+  
+}
+
+#uploadmeter {
+  height: 20px;
+  background-color: blue;
+}
+
+#uploadrate{ 
+  float: left; 
+  text-align: left; 
+  width: 25%; 
+}
+
+#uploadstatus { 
+  float: left; 
+  text-align: center; 
+  width: 50%; 
+  font-style: italic; 
+}
+
+#uploadpercent	{ 
+  float: right; 
+  text-align: right; 
+  width: 24%; 
+}
+
+#themeter { 
+  margin-bottom: 60px; 
+}
+
+
+#statustable table { 
+  width: 400px; 
+  margin: 4px auto 20px auto; 
+  text-align: right; 
+  border-collapse: collapse; 
+  border: 0; 
+  border-bottom: 1px solid #bbb;
+}
+
+#statustable table td { 
+  border-top: 1px solid #bbb; 
+  text-align: center; 
+}
+
+.header {
+  font-weight: bold;
+}
+
+.alt1 {
+  background-color: #e6e6e6; 
+}
+
+.alt2 {
+  background-color: #efefef; 
+}
+
+
+
+
+/* - - - - - - - - - - - - - - - - - - - - -
+
+Title : Lightbox CSS
+Author : Kevin Hale
+URL : http://particletree.com/features/lightbox-gone-wild/
+
+Created : January 13, 2006
+Modified : February 1, 2006
+
+- - - - - - - - - - - - - - - - - - - - - */
+
+#lightbox{
+	display:none;
+
+	top:50%;
+	left:50%;
+	z-index:9999;
+	width:500px;
+	height:400px;
+	margin:-220px 0 0 -250px;
+	border:1px solid #fff;
+	background:#FDFCE9;
+	text-align:left;
+	position:absolute;
+}
+#lightbox[id]{
+	position:fixed;
+}
+
+#overlay{
+	display:none;
+	position:absolute;
+	top:0;
+	left:0;
+	width:100%;
+	height:100%;
+	z-index:5000;
+	background-color:#000;
+	-moz-opacity: 0.6;
+	opacity:.60;
+	filter: alpha(opacity=60);
+}
+#overlay[id]{
+	position:fixed;
+}
+
+#lightbox.done #lbLoadMessage{
+	display:none;
+}
+#lightbox.done #lbcontent{
+	display:block;
+}
+#lightbox.loading #lbcontent{
+	display:none;
+}
+#lightbox.loading #lbLoadMessage{
+	display:block;
+}
+
+/*
+#lightbox.done img{
+	width:100%;
+	height:100%;
+}
+*/

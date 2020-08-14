@@ -1,0 +1,29 @@
+/* $Id: default_folder.css,v 41.0 2014/10/07 22:29:30 plotkin Exp $ */
+
+.folder_row_even {
+  background-color: #FFFFFF;
+  color: #000000;
+/*  border: 1px solid black; */
+}
+
+.folder_row_odd {
+  background-color: #F0F0F0;
+  color: #000000;
+/*  border: 1px solid black; */
+}
+
+.folder_row_header {
+	background-color: #3A4972;
+	color: #FFFFFF;
+}
+
+.folder_table {
+/*  border-style: solid; */
+  border-style: none;
+}
+
+.dt_icon_column {
+    width: 20px;
+    min-width: 20px;
+    text-align: right;
+}

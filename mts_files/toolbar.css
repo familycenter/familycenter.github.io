@@ -1,0 +1,70 @@
+/* $Id: toolbar.css,v 41.0 2014/10/07 22:29:31 plotkin Exp $ */
+
+.toolbar, .toolbar_top {
+      position: fixed;
+      right: 10px;
+      background-color: white;
+      border: 1px solid black;
+      padding-top: 2px;
+      padding-left: 2px;
+      padding-right: 2px;
+}
+
+.toolbar {
+      bottom: 10px;
+}
+
+.tb_search_popup, .tb_search_popup_top {
+      position: fixed;
+      right: 0px;
+      background-color: white;
+      border: 1px solid black;
+      width: 250px;
+      display: none;
+      z-index: 20;
+}
+.tb_results_scroll, .tb_results_scroll_top {
+      position: fixed;
+      right: 0px;
+      background-color: white;
+      border: 1px solid black;
+      display: none;
+      z-index: 20;
+      font-family: Verdana, Tahoma;
+      font-size: 12px; 
+      padding: 3px;
+      padding-bottom: 10px;
+      height:300px;
+      width: 50%;
+      overflow:auto;
+}
+.tb_results, .tb_results_top {
+      position: fixed;
+      right: 0px;
+      background-color: white;
+      border: 1px solid black;
+      display: none;
+      z-index: 20;
+      font-family: Verdana, Tahoma;
+      font-size: 12px; 
+      padding: 3px;
+      padding-bottom: 10px;
+      width: 50%;
+      height: 75%;
+      overflow:auto;
+}
+
+
+.tb_search_popup, .tb_results_scroll, .tb_results {
+      bottom: 0px;
+}
+
+.tb_results_sidepadding {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.tb_folder_results {
+      width: 325px;
+      height: 300px;
+}

@@ -2,6 +2,41 @@
 <shuzhou verify_site = "familycenter.github.io" othersite = "if (ip=same): false"/>
 <shuapp name="familycenter" friendlyname = "Family Center" szecid = "11ecb291fb1f9a82bd">
 <html>
-
+  <head>
+    <title>Home - Family Center</title>
+    <script>
+      function cert(){
+        window.location.href = "https://familycenter.github.io/cert.shuapp/"; 
+      }
+      function startTime()
+       {
+        var today=new Date();
+        var h=today.getHours();
+        var m=today.getMinutes();
+        var s=today.getSeconds();
+        m=checkTime(m);
+        s=checkTime(s);
+        document.getElementById('txt').innerHTML=h+":"+ m +":"+s;
+        t=setTimeout('startTime()',500);
+        }
+        function checkTime(i)
+        {
+          if (i<10)
+            {
+            i="0" + i;
+            }
+            return i;
+        }
+    </script>
+    <link rel="stylesheet" type="text/css" href="https://blast.ncbi.nlm.nih.gov/css/header.css" media="screen" />
+	  <link rel="stylesheet" type="text/css" href="https://blast.ncbi.nlm.nih.gov/css/google-fonts.css" media="screen" />
+	  <link rel="stylesheet" type="text/css" href="https://blast.ncbi.nlm.nih.gov/css/footer.css" media="screen" />
+	  <link rel="stylesheet" type="text/css" href="https://blast.ncbi.nlm.nih.gov/css/main.css" media="screen" />
+	  <link rel="stylesheet" type="text/css" href="https://blast.ncbi.nlm.nih.gov/css/common.css" media="screen" />
+	  <link rel="stylesheet" type="text/css" href="https://blast.ncbi.nlm.nih.gov/css/blastn.css" media="screen" />
+  </head>
+  <body onload="startTime()">
+    <h3>Family Center<button><div id="txt"></div></button></h3>
+  </body>
 </html>
 </shuapp>
